@@ -3,6 +3,7 @@ module github.com/R3iwan/chat-app
 go 1.22.6
 
 require (
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/spf13/viper v1.19.0
 	golang.org/x/crypto v0.28.0
 )
@@ -17,6 +18,7 @@ require (
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jackc/pgx/v5 v5.7.1

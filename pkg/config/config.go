@@ -12,12 +12,11 @@ type Config struct {
 func NewConfig() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AddConfigPath(".")
+	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
-
-	viper.AutomaticEnv()
 
 	config := &Config{
 		PostgresURL: viper.GetString("POSTGRES_URL"),
