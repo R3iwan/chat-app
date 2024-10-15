@@ -21,7 +21,8 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token string `json:"token"`
+	AccsessToken string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -48,13 +49,23 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := genereteJWT(req.Username)
+	accessToken, err := generateJWT(req.Username, 15*time.Minute)
 	if err != nil {
-		http.Error(w, "Invalid token", http.StatusInternalServerError)
+		http.Error(w, "Internal server error: could not generate JWT", http.StatusInternalServerError)
 		return
 	}
 
-	response := LoginResponse{Token: token}
+	refreshToken, err := generateJWT(req.Username, 7*24*time.Hour)
+	if err != nil {
+		http.Error(w, "Internal server error: could not generate JWT", http.StatusInternalServerError)
+		return
+	}
+
+	response := LoginResponse{
+		AccsessToken: accessToken,
+		RefreshToken: refreshToken,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -73,10 +84,10 @@ func getUserHashPassword(username string) (string, error) {
 	return hashedPassword, nil
 }
 
-func genereteJWT(username string) (string, error) {
+func generateJWT(username string, duration time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username": username,
-		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+		"exp":      time.Now().Add(duration).Unix(),
 	})
 
 	tokenString, err := token.SignedString(jwtSecret)

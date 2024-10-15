@@ -4,7 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/R3iwan/chat-app/internal/chat"
 	"github.com/R3iwan/chat-app/internal/db"
+	"github.com/R3iwan/chat-app/internal/message"
 	"github.com/R3iwan/chat-app/internal/middleware"
 	"github.com/R3iwan/chat-app/internal/user"
 	"github.com/R3iwan/chat-app/pkg/config"
@@ -29,6 +31,11 @@ func main() {
 	r.HandleFunc("/api/v1/register", user.RegisterHandler).Methods("POST")
 	r.HandleFunc("/api/v1/login", user.LoginHandler).Methods("POST")
 	r.Handle("/api/v1/protected", middleware.JWTMiddleware(http.HandlerFunc(protectedHandler))).Methods("GET")
+	r.HandleFunc("/ws", chat.WebSocketHandler)
+	r.HandleFunc("/ap1/v1/messages", message.GetMessagesHandler).Methods("GET")
+
+	fs := http.FileServer(http.Dir("./frontend"))
+	r.PathPrefix("/").Handler(fs)
 
 	log.Printf("User service running on port %s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, r))

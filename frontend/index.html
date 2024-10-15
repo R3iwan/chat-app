@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Chat Test</h1>
+    <button onclick="sendMessage()">Send Message</button>
+    <div id="messages"></div>
+
+    <script>
+        const jwtToken = 'Bearer your_token';
+
+        const socket = new WebSocket('ws://localhost:8080/ws', [], {
+            headers: {
+                'Authorization': jwtToken
+            }
+        });
+
+        socket.onopen = function(event) {
+            console.log('WebSocket is open now.');
+        };
+
+        socket.onmessage = function(event) {
+            console.log('Message from server: ', event.data);
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('p');
+            messageElement.textContent = event.data;
+            messagesDiv.appendChild(messageElement);
+        };
+
+        socket.onclose = function(event) {
+            console.log('WebSocket is closed now.');
+        };
+
+        function sendMessage() {
+            const message = "Hello from client!";
+            console.log("Sending message: ", message);
+            socket.send(message);
+        }
+    </script>
+</body>
+</html>

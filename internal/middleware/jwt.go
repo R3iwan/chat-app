@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var jwtSectet = []byte(viper.GetString("JWT_SECRET"))
+var jwtSecret = []byte(viper.GetString("JWT_SECRET"))
 
 func JWTMiddleware(n http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +32,7 @@ func JWTMiddleware(n http.Handler) http.Handler {
 		claims := &jwt.MapClaims{}
 
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtSectet, nil
+			return jwtSecret, nil
 		})
 
 		if err != nil || !token.Valid {
@@ -43,4 +43,19 @@ func JWTMiddleware(n http.Handler) http.Handler {
 		log.Printf("User %s authenticated", (*claims)["username"])
 		n.ServeHTTP(w, r)
 	})
+}
+
+func ValidateJWT(token string) (jwt.MapClaims, error) {
+	tokenStr := strings.TrimPrefix(token, "Bearer ")
+
+	claims := jwt.MapClaims{}
+	t, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+
+	if err != nil || !t.Valid {
+		return nil, err
+	}
+
+	return claims, nil
 }
