@@ -3,10 +3,13 @@ package message
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/R3iwan/chat-app/internal/db"
+	"github.com/R3iwan/chat-app/internal/user"
 )
 
 type Message struct {
@@ -51,4 +54,38 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(messages)
+}
+
+func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	userID, err := user.ExtractUserIDFromJWT(tokenString)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var msg Message
+	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		log.Printf("Error decoding request body: %v", err)
+		return
+	}
+
+	msg.SenderID = int(userID)
+	msg.SentAt = time.Now()
+
+	query := `INSERT INTO messages (sender_id, receiver_id, content, sent_at) VALUES ($1, $2, $3, $4)`
+	_, err = db.DB.Exec(context.Background(), query, msg.SenderID, msg.ReceiverID, msg.Content, msg.SentAt)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }

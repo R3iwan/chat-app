@@ -32,7 +32,10 @@ func main() {
 	r.HandleFunc("/api/v1/login", user.LoginHandler).Methods("POST")
 	r.Handle("/api/v1/protected", middleware.JWTMiddleware(http.HandlerFunc(protectedHandler))).Methods("GET")
 	r.HandleFunc("/ws", chat.WebSocketHandler)
-	r.HandleFunc("/ap1/v1/messages", message.GetMessagesHandler).Methods("GET")
+	r.HandleFunc("/api/v1/messages", message.GetMessagesHandler).Methods("GET")
+	r.HandleFunc("/api/v1/messages", message.SendMessageHandler).Methods("POST")
+	r.Handle("/api/v1/messages", middleware.JWTMiddleware(http.HandlerFunc(message.GetMessagesHandler))).Methods("GET")
+	r.Handle("/api/v1/messages", middleware.JWTMiddleware(http.HandlerFunc(message.SendMessageHandler))).Methods("POST")
 
 	fs := http.FileServer(http.Dir("./frontend"))
 	r.PathPrefix("/").Handler(fs)

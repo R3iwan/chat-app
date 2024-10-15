@@ -1,45 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Test</title>
+  <meta charset="UTF-8">
+  <title>Chat App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container { width: 400px; padding: 20px; background-color: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+    #messages { height: 300px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+    .message { margin-bottom: 5px; padding: 8px; background-color: #e1ffc7; border-radius: 5px; }
+    input, select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; }
+    button { background-color: #4caf50; color: white; border: none; }
+  </style>
 </head>
 <body>
-    <h1>WebSocket Chat Test</h1>
-    <button onclick="sendMessage()">Send Message</button>
-    <div id="messages"></div>
+  <div class="container">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
 
-    <script>
-        const jwtToken = 'Bearer your_token';
+    <div id="chatSection" style="display:none;">
+      <h2>Chat</h2>
+      <div id="messages"></div>
+      <select id="receiver">
+        <option value="7">Bob</option>
+        <option value="6">Alice</option>
+      </select>
+      <input type="text" id="messageInput" placeholder="Type a message...">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
 
-        const socket = new WebSocket('ws://localhost:8080/ws', [], {
-            headers: {
-                'Authorization': jwtToken
-            }
-        });
-
-        socket.onopen = function(event) {
-            console.log('WebSocket is open now.');
-        };
-
-        socket.onmessage = function(event) {
-            console.log('Message from server: ', event.data);
-            const messagesDiv = document.getElementById('messages');
-            const messageElement = document.createElement('p');
-            messageElement.textContent = event.data;
-            messagesDiv.appendChild(messageElement);
-        };
-
-        socket.onclose = function(event) {
-            console.log('WebSocket is closed now.');
-        };
-
-        function sendMessage() {
-            const message = "Hello from client!";
-            console.log("Sending message: ", message);
-            socket.send(message);
-        }
-    </script>
+  <script src="chat.js"></script>
 </body>
 </html>

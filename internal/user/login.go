@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -21,7 +22,7 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccsessToken string `json:"access_token"`
+	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
 
@@ -40,29 +41,37 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := getUserHashPassword(req.Username)
 	if err != nil {
-		http.Error(w, "Internal server error: could not hash password", http.StatusInternalServerError)
+		log.Printf("Error fetching password: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	log.Println("Hashed password:", hashedPassword)
 
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(req.Password)); err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	accessToken, err := generateJWT(req.Username, 15*time.Minute)
+	userID, err := getUserID(req.Username)
+	if err != nil {
+		http.Error(w, "Internal server error: could not get user ID", http.StatusInternalServerError)
+		return
+	}
+
+	accessToken, err := generateJWT(req.Username, userID, 15*time.Minute)
 	if err != nil {
 		http.Error(w, "Internal server error: could not generate JWT", http.StatusInternalServerError)
 		return
 	}
 
-	refreshToken, err := generateJWT(req.Username, 7*24*time.Hour)
+	refreshToken, err := generateJWT(req.Username, userID, 7*24*time.Hour)
 	if err != nil {
 		http.Error(w, "Internal server error: could not generate JWT", http.StatusInternalServerError)
 		return
 	}
 
 	response := LoginResponse{
-		AccsessToken: accessToken,
+		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
 
@@ -73,21 +82,32 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func getUserID(username string) (int, error) {
+	var userID int
+	err := db.DB.QueryRow(context.Background(), "SELECT id FROM users WHERE username = $1", username).Scan(&userID)
+	if err != nil {
+		log.Printf("Error getting user ID for username %s: %v", username, err)
+		return 0, err
+	}
+	return userID, nil
+}
+
 func getUserHashPassword(username string) (string, error) {
 	var hashedPassword string
 	err := db.DB.QueryRow(context.Background(), "SELECT password_hash FROM users WHERE username = $1", username).Scan(&hashedPassword)
 	if err != nil {
 		log.Printf("Error getting user password for username %s: %v", username, err)
-		return "", err
+		return hashedPassword, nil
 	}
 
 	return hashedPassword, nil
 }
 
-func generateJWT(username string, duration time.Duration) (string, error) {
+func generateJWT(username string, userID int, duration time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username": username,
-		"exp":      time.Now().Add(duration).Unix(),
+		"userID":   userID,
+		"exp":      time.Now().Add(time.Hour * 3).Unix(),
 	})
 
 	tokenString, err := token.SignedString(jwtSecret)
@@ -96,4 +116,25 @@ func generateJWT(username string, duration time.Duration) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func ExtractUserIDFromJWT(tokenStr string) (float64, error) {
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	if err != nil || !token.Valid {
+		return 0, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0, fmt.Errorf("invalid token claims")
+	}
+
+	userID, ok := claims["userID"].(float64)
+	if !ok {
+		return 0, fmt.Errorf("userID not found or invalid type")
+	}
+
+	return userID, nil
 }
