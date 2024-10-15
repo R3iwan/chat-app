@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: chatapp_user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: chatapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://chatapp_user:password@db:5432/chatapp?sslmode=disable
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:
